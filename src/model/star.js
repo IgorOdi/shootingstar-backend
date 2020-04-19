@@ -10,9 +10,9 @@ const StarSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    isCurrent: {
-        type: Boolean,
-        default: false
+    starMessage: {
+        type: String,
+        default: "I have nothing to say"
     }
 });
 

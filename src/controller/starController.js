@@ -1,5 +1,9 @@
 const express = require('express');
+const cron = require('node-cron');
 const star = require('../model/star');
+const configs = require('../model/configs')
+const currentStars = require('../model/currentStars');
+const configController = require('./configController');
 
 const router = express.Router();
 const starUrl = '/star'
@@ -7,14 +11,24 @@ const createStarUrl = '/star/create'
 
 var lastIndex = 0
 
-router.post(starUrl, async (req, res) => {
+console.log("Iniciando troca de estrela por tempo");
+set_new_star();
+
+async function set_new_star(req, res) {
 
     star.find({}, function (err, stars) {
 
         if (!err) {
 
-            var nextStarIndex = lastIndex;
-            star.findOne({ 'isCurrent': true }, function (err, star) {
+            let previousStar = star;
+            let starIndex = 0;
+            currentStars.findOne({}, (err, prevStar) => {
+
+                previousStar = prevStar;
+                starIndex = prevStar.starIndex + 1;
+                console.log(starIndex);
+
+                var nextStarIndex = lastIndex;
 
                 while (nextStarIndex == lastIndex) {
                     nextStarIndex = Math.floor(Math.random() * stars.length);
@@ -22,27 +36,51 @@ router.post(starUrl, async (req, res) => {
                 }
 
                 lastIndex = nextStarIndex;
-                console.log('Next star index is: ' + nextStarIndex);
-            });
+                console.log("Next Star index is: " + nextStarIndex);
+                console.log("Next Star is: " + stars[nextStarIndex].starName);
 
-            star.updateOne({ 'isCurrent': true }, { 'isCurrent': false }, function (err) {
+                let interval = 0;
+                let wishesNeeded = 10;
+                configs.findOne({}, (err, doc) => {
 
-                console.log('The current star is not the current anymore');
-                star.updateOne({ 'starName': stars[nextStarIndex].starName }, { 'isCurrent': true }, function (err) {
+                    wishesNeeded = doc.wishesNeeded;
+                    interval = doc.starInterval;
+                });
 
-                    console.log('The star ' + stars[nextStarIndex].starName + ' is now the current star in the sky');
-                    res.send({
-                        '_id': stars[nextStarIndex]._id,
-                        'starName': stars[nextStarIndex].starName,
-                        'starProperty': stars[nextStarIndex].starProperty
-                    })
+                let actualTime = new Date(new Date().toUTCString()).valueOf();
+                const nextTime = actualTime + interval * 1000;
+                currentStars.findOneAndUpdate({}, {
+                    'starName': stars[nextStarIndex].starName,
+                    'starProperty': stars[nextStarIndex].starProperty,
+                    'wishesReceived': 0,
+                    'endTime': nextTime,
+                    'starIndex': starIndex,
+                    'starMessage': stars[nextStarIndex].starMessage
+                }, function (err, newStar, r) {
+
+                    setTimeout(function () { set_new_star() }, interval * 1000);
+                    const survived = previousStar.wishesReceived >= wishesNeeded;
+                    console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
+                    configs.findOneAndUpdate({}, {
+
+                        'lastStarSurvived': survived
+                    });
+                    if (res)
+                        res.send({ newStar, 'lastStarSurvived': survived });
                 });
             });
 
         } else {
-            res.status(400).send({ error: 'There is no star in the list' });
+
+            if (res)
+                res.status(400).send({ error: 'There is no star in the list' });
         }
     });
+}
+
+router.post(starUrl, async (req, res) => {
+
+    set_new_star(req, res);
 });
 
 router.get(starUrl + '/:param', async (req, res) => {
@@ -57,18 +95,10 @@ router.get(starUrl + '/:param', async (req, res) => {
 
     } else if (req.params.param == 'current') {
 
-        star.find({ 'isCurrent': true }, function (err, stars) {
+        currentStars.findOne({}, (err, newStar) => {
 
-            if (!err) {
-
-                if (stars == '')
-                    res.send({ error: 'There is no current star' });
-                res.json(stars);
-            } else {
-                res.status(400).send({ error: 'There is no star in the list' });
-            }
+            res.send(newStar);
         });
-
     } else {
 
         return res.status(400).send({ error: 'Parameter not recognized' });

@@ -65,15 +65,20 @@ async function set_new_star(req, res) {
 
                         'lastStarSurvived': survived
                     });
-                    if (res)
+                    if (res) {
+                        
+                        res = setHeaders(res);
                         res.send({ newStar, 'lastStarSurvived': survived });
+                    }
                 });
             });
 
         } else {
 
-            if (res)
+            if (res) {
+                res = setHeaders(res);
                 res.status(400).send({ error: 'There is no star in the list' });
+            }
         }
     });
 }
@@ -97,6 +102,7 @@ router.get(starUrl + '/:param', async (req, res) => {
 
         currentStars.findOne({}, (err, newStar) => {
 
+            res = setHeaders(res);
             res.send(newStar);
         });
     } else {
@@ -110,11 +116,23 @@ router.post(createStarUrl, async (req, res) => {
     try {
 
         const newStar = await star.create(req.body);
+        res = setHeaders(res);
         return res.send({ newStar });
     } catch (err) {
 
+        res = setHeaders(res);
         return res.status(400).send({ error: 'Failed to create a new Shooting Star' });
     }
 });
+
+function setHeaders(res) {
+
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "Accept, X-Access-Token, X-Application-Name, X-Request-Sent-Time");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    return res;
+}
 
 module.exports = app => app.use('', router);

@@ -4,7 +4,11 @@ const WishSchema = new mongoose.Schema({
 
     text: {
         type: String,
-        require: true,
+        required: true,
+    },
+    starIndex: {
+        type: Number,
+        required: true,
     }
 });
 

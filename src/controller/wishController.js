@@ -9,8 +9,8 @@ router.post(wishUrl, async (req, res) => {
 
     try {
 
-        console.log("New wish received with text: " + req.body.text);
         const newWish = await wish.create(req.body);
+        console.log("New wish received with text: " + req.body.text);
 
         currentStars.findOne({}, (err, current) => {
 
@@ -51,6 +51,17 @@ router.get(wishUrl, async (req, res) => {
         res = setHeaders(res);
         res.json(texts);
     })
+});
+
+router.get(wishUrl + '/:index', async (req, res) => {
+
+    const index = parseInt(req.params.index);
+    console.log("Buscando desejos de index " + index);
+    wish.find({ 'starIndex': index }, (err, wishes) => {
+
+        res = setHeaders(res);
+        res.send(wishes);
+    });
 });
 
 function setHeaders(res) {

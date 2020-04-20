@@ -2,6 +2,7 @@ const express = require('express');
 const cron = require('node-cron');
 const star = require('../model/star');
 const configs = require('../model/configs')
+const results = require('../model/results')
 const currentStars = require('../model/currentStars');
 const configController = require('./configController');
 
@@ -16,17 +17,16 @@ set_new_star();
 
 async function set_new_star(req, res) {
 
-    star.find({}, function (err, stars) {
+    star.find({}, async function (err, stars) {
 
         if (!err) {
 
             let previousStar = star;
             let starIndex = 0;
-            currentStars.findOne({}, (err, prevStar) => {
+            currentStars.findOne({}, async (err, prevStar) => {
 
                 previousStar = prevStar;
                 starIndex = prevStar.starIndex + 1;
-                console.log(starIndex);
 
                 var nextStarIndex = lastIndex;
 
@@ -41,35 +41,35 @@ async function set_new_star(req, res) {
 
                 let interval = 0;
                 let wishesNeeded = 10;
-                configs.findOne({}, (err, doc) => {
+                configs.findOne({}, async (err, doc) => {
 
                     wishesNeeded = doc.wishesNeeded;
                     interval = doc.starInterval;
-                });
 
-                let actualTime = new Date(new Date().toUTCString()).valueOf();
-                const nextTime = actualTime + interval * 1000;
-                currentStars.findOneAndUpdate({}, {
-                    'starName': stars[nextStarIndex].starName,
-                    'starProperty': stars[nextStarIndex].starProperty,
-                    'wishesReceived': 0,
-                    'endTime': nextTime,
-                    'starIndex': starIndex,
-                    'starMessage': stars[nextStarIndex].starMessage
-                }, function (err, newStar, r) {
+                    let actualTime = new Date(new Date().toUTCString()).valueOf();
+                    const nextTime = actualTime + interval * 1000;
+                    currentStars.findOneAndUpdate({}, {
+                        'starName': stars[nextStarIndex].starName,
+                        'starProperty': stars[nextStarIndex].starProperty,
+                        'wishesReceived': 0,
+                        'endTime': nextTime,
+                        'starIndex': starIndex,
+                        'starMessage': stars[nextStarIndex].starMessage
+                    }, async function (err, newStar, r) {
 
-                    setTimeout(function () { set_new_star() }, interval * 1000);
-                    const survived = previousStar.wishesReceived >= wishesNeeded;
-                    console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
-                    configs.findOneAndUpdate({}, {
+                        setTimeout(function () { set_new_star() }, interval * 1000);
+                        console.log("A última estrela precisava de: " + wishesNeeded + " desejos");
+                        console.log("E recebeu: " + previousStar.wishesReceived + " desejos");
+                        const survived = previousStar.wishesReceived >= wishesNeeded;
+                        console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
 
-                        'lastStarSurvived': survived
+                        const result = await results.create({ 'starIndex': starIndex, 'starSurvived': survived });
+                        if (res) {
+
+                            res = setHeaders(res);
+                            res.send({ newStar, result });
+                        }
                     });
-                    if (res) {
-                        
-                        res = setHeaders(res);
-                        res.send({ newStar, 'lastStarSurvived': survived });
-                    }
                 });
             });
 
@@ -109,6 +109,40 @@ router.get(starUrl + '/:param', async (req, res) => {
 
         return res.status(400).send({ error: 'Parameter not recognized' });
     }
+});
+
+
+router.get(starUrl + '/:param/:index', async (req, res) => {
+
+    if (req.params.param == 'survive') {
+
+        const index = req.params.index;
+        results.findOne({ 'starIndex': index }, (err, result) => {
+
+            if (!result) res.status(400).send({ error: 'Failed to get result for index ' + index });
+            else {
+                res = setHeaders(res);
+                res.send(result);
+            }
+        });
+    } else {
+        res.status(400).send({ error: 'Parameter not recognized' });
+    }
+});
+
+router.delete(starUrl, async (req, res) => {
+
+    results.deleteMany({}, function (err) {
+
+        if (err) res.status(400).send({ error: 'Failed to delete all results' });
+        else {
+
+            currentStars.findOneAndUpdate({}, { 'starIndex': 0 }, (err, doc, res) => { });
+            console.log("Deletou todos os resultados com sucesso");
+            res = setHeaders(res);
+            res.send({ 'status': 'Sucess' });
+        }
+    });
 });
 
 router.post(createStarUrl, async (req, res) => {

@@ -10,10 +10,6 @@ const ConfigSchema = new mongoose.Schema({
         type: Number,
         default: 10,
     },
-    lastStarSurvived: {
-        type: Boolean,
-        required: true
-    }
 });
 
 const configs = mongoose.model('configs', ConfigSchema);

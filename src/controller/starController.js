@@ -63,7 +63,12 @@ async function set_new_star(req, res) {
                         const survived = previousStar.wishesReceived >= wishesNeeded;
                         console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
 
-                        const result = await results.create({ 'starIndex': starIndex, 'starSurvived': survived });
+                        const result = await results.create({
+                            'starName': previousStar.starName,
+                            'wishesReceived': previousStar.wishesReceived,
+                            'starIndex': starIndex,
+                            'starSurvived': survived
+                        });
                         if (res) {
 
                             res = setHeaders(res);

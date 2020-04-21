@@ -21,12 +21,32 @@ async function set_new_star(req, res) {
 
         if (!err) {
 
-            let previousStar = star;
+            let previousStar = 0;
             let starIndex = 0;
             currentStars.findOne({}, async (err, prevStar) => {
 
-                previousStar = prevStar;
-                starIndex = prevStar.starIndex + 1;
+                if (prevStar) {
+
+                    previousStar = prevStar;
+                    starIndex = prevStar.starIndex + 1;
+                }
+
+                let interval = 0;
+                let wishesNeeded = 10;
+                let result = null;
+                if (prevStar) {
+                    console.log("A última estrela precisava de: " + wishesNeeded + " desejos");
+                    console.log("E recebeu: " + previousStar.wishesReceived + " desejos");
+                    const survived = previousStar.wishesReceived >= wishesNeeded;
+                    console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
+
+                    result = await results.create({
+                        'starName': previousStar.starName,
+                        'wishesReceived': previousStar.wishesReceived,
+                        'starIndex': prevStar.starIndex,
+                        'starSurvived': survived
+                    });
+                }
 
                 var nextStarIndex = lastIndex;
 
@@ -39,8 +59,6 @@ async function set_new_star(req, res) {
                 console.log("Next Star index is: " + nextStarIndex);
                 console.log("Next Star is: " + stars[nextStarIndex].starName);
 
-                let interval = 0;
-                let wishesNeeded = 10;
                 configs.findOne({}, async (err, doc) => {
 
                     wishesNeeded = doc.wishesNeeded;
@@ -58,21 +76,12 @@ async function set_new_star(req, res) {
                     }, async function (err, newStar, r) {
 
                         setTimeout(function () { set_new_star() }, interval * 1000);
-                        console.log("A última estrela precisava de: " + wishesNeeded + " desejos");
-                        console.log("E recebeu: " + previousStar.wishesReceived + " desejos");
-                        const survived = previousStar.wishesReceived >= wishesNeeded;
-                        console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
 
-                        const result = await results.create({
-                            'starName': previousStar.starName,
-                            'wishesReceived': previousStar.wishesReceived,
-                            'starIndex': starIndex,
-                            'starSurvived': survived
-                        });
                         if (res) {
 
                             res = setHeaders(res);
-                            res.send({ newStar, result });
+                            res.send({ newStar });
+                            if (prevStar) res.send({ result });
                         }
                     });
                 });

@@ -44,11 +44,12 @@ async function set_new_star(req, res) {
 
                 configs.findOne({}, async (err, doc) => {
 
+                    let interval = 0;
+                    let wishesNeeded = 0;
+
                     wishesNeeded = doc.wishesNeeded;
                     interval = doc.starInterval;
 
-                    let interval = 0;
-                    let wishesNeeded = 0;
                     let result = null;
                     if (prevStar) {
                         console.log("A última estrela precisava de: " + wishesNeeded + " desejos");

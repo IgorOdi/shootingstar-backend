@@ -31,23 +31,6 @@ async function set_new_star(req, res) {
                     starIndex = prevStar.starIndex + 1;
                 }
 
-                let interval = 0;
-                let wishesNeeded = 10;
-                let result = null;
-                if (prevStar) {
-                    console.log("A última estrela precisava de: " + wishesNeeded + " desejos");
-                    console.log("E recebeu: " + previousStar.wishesReceived + " desejos");
-                    const survived = previousStar.wishesReceived >= wishesNeeded;
-                    console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
-
-                    result = await results.create({
-                        'starName': previousStar.starName,
-                        'wishesReceived': previousStar.wishesReceived,
-                        'starIndex': prevStar.starIndex,
-                        'starSurvived': survived
-                    });
-                }
-
                 var nextStarIndex = lastIndex;
 
                 while (nextStarIndex == lastIndex) {
@@ -63,6 +46,23 @@ async function set_new_star(req, res) {
 
                     wishesNeeded = doc.wishesNeeded;
                     interval = doc.starInterval;
+
+                    let interval = 0;
+                    let wishesNeeded = 0;
+                    let result = null;
+                    if (prevStar) {
+                        console.log("A última estrela precisava de: " + wishesNeeded + " desejos");
+                        console.log("E recebeu: " + previousStar.wishesReceived + " desejos");
+                        const survived = previousStar.wishesReceived >= wishesNeeded;
+                        console.log(survived ? "The Last Star Survived" : "The Last Star Perished");
+
+                        result = await results.create({
+                            'starName': previousStar.starName,
+                            'wishesReceived': previousStar.wishesReceived,
+                            'starIndex': prevStar.starIndex,
+                            'starSurvived': survived
+                        });
+                    }
 
                     let actualTime = new Date(new Date().toUTCString()).valueOf();
                     const nextTime = actualTime + interval * 1000;
